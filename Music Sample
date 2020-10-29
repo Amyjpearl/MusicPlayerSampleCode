@@ -1,0 +1,293 @@
+Music Sample 
+<!DOCTYPE html>
+<html>
+ <a-scene>
+            <a-assets>
+                <img id="groundTexture" src="ground.png">
+                <img id="sky" src="maxresdefault.jpg">
+                <audio id="song1" src="songs/Marshmello%20-%20Alone%20(Official%20Music%20Video).mp3"></audio>
+                <audio id="song2" src="songs/3LAU%20-%20Touch%20(ft.%20Carly%20Paige)%20(Zeds%20Dead%20Remix).mp3"></audio>
+                <audio id="song3" src="songs/Zeds%20Dead%20-%20Collapse%20(feat.%20Memorecks).mp3"></audio>
+                <audio id="song4" src="songs/Porter%20Robinson%20-%20Sad%20Machine%20(Lyric%20Video).mp3"></audio>
+                <audio id="song5" src="songs/BONNIE%20X%20CLYDE%20-%20Bass%20Jam.mp3"></audio>
+                <audio id="song6" src="songs/Louis%20The%20Child%20-%20Better%20Not%20(ft.%20Wafia).mp3"></audio>
+
+
+            </a-assets>
+  <a-entity id="purpleRing"shadow position="-2.2 3.6 -4.251" rotation="90 0 0" scale="0.34 0.34 0.15" material="color:#8669ba" visible="false" geometry="primitive:torus" >
+                <a-animation  begin = "begin" pause = "pause" attribute = "position"  dur="1000" repeat="indefinite" to="-2.2 3.5 -4.251" direction="alternate" easing="linear"></a-animation>
+            </a-entity>
+
+            <a-entity visible="false" shadow id="blueRing" position="1.347 3.6 -4.251" rotation="90 0 0" scale="0.34 0.34 0.15" material="color:#2be4f9" geometry="primitive:torus" >
+                <a-animation  begin = "begin" pause = "pause" attribute = "position"  dur="1000" repeat="indefinite" to="1.347 3.5 -4.251" easing="linear" direction="alternate"
+                             ></a-animation>
+            </a-entity>
+
+         <a-entity id="playbutton1" position="-.4 4 -4.2" clicky><a-gltf-model  scale=" .75 .75 .75" src="s-play/scene.gltf"  clicky onclick="playsong1()" 
+                      event-set__down2="_event: click; _target: #purpleRing; visible: true">
+                </a-gltf-model>
+             <a-animation begin = "begin" pause = "pause" attribute="position" to="-.4 4.2 -4" direction="alternate" dur= "580" repeat="indefinite"></a-animation>
+         </a-entity>
+         <a-entity id="playbutton2" position=".8 4 -4.2" clicky><a-gltf-model  scale=" .75 .75 .75" src="s-play/scene.gltf"  clicky onclick="playsong2()" 
+                      event-set__down2="_event: click; _target: #blueRing; visible: true">
+                </a-gltf-model>
+             <a-animation begin = "begin" pause = "pause" attribute="position" to=".8 4.2 -4" direction="alternate" dur= "580" repeat="indefinite"></a-animation>
+         </a-entity>
+
+            <script>
+                var audio1=document.getElementById('song1');
+                var audio2=document.getElementById('song2');
+                var playing1 = false, playing2 = false;
+                var audioCtx=new AudioContext();
+                var oldLevel = 0;
+                var analyser1=audioCtx.createAnalyser();
+                var analyser2=audioCtx.createAnalyser();
+                var analyser3=audioCtx.createAnalyser();
+                var source1=audioCtx.createMediaElementSource(audio1);
+                var source2=audioCtx.createMediaElementSource(audio2);
+                var beatBars= ["bar1", "bar2", "bar3", "bar4", "bar5"];  // Bars are in reverse because of how frequency data is presented
+                var initialBarHeight = 0.125;
+                var beatBalls=["bounce", "colorChange", "pulse"];
+                var initialBallAttributes=[document.getElementById(beatBalls[0]).attributes, document.getElementById(beatBalls[1]).attributes, document.getElementById(beatBalls[2]).attributes];
+                var bounceBallPos = document.getElementById(beatBalls[0]).getAttribute('position');
+                var bounceBallY = bounceBallPos.y;
+                var colorSpheres = document.getElementsByName("cc");
+                // this is an array of arrays - each ring has an array of spheres
+                var rings = [];
+                rings.push(document.getElementsByName("cc1"));
+                rings.push(document.getElementsByName("cc2"));
+                rings.push(document.getElementsByName("cc3"));
+                rings.push(document.getElementsByName("cc4"));
+                
+                console.log(source1);
+                console.log(source2);
+                
+                source1.connect(analyser1);
+                source2.connect(analyser2);
+                analyser1.connect(audioCtx.destination);
+                analyser1.fftSize=64;
+                analyser2.connect(audioCtx.destination);
+                analyser2.fftSize=64;
+                frequencyData=new Uint8Array(analyser1.frequencyBinCount);
+                
+                resetbars();
+
+                function playsong1()
+                {   
+                    if (playing2)
+                        audio2.pause();
+                    playing1 = !playing1;
+                    playing2 = false;
+                    updateRingsAndPlayButtons();
+                    
+                    if (!playing1)
+                        audio1.pause();
+                    else
+                    {
+                        audio1.play();
+                        renderbars(analyser1);
+                    }
+                }
+
+                function playsong2()
+                { 
+                    if (playing1)
+                        audio1.pause();
+                    playing1 = false;
+                    playing2 = !playing2;
+                    updateRingsAndPlayButtons();
+                    
+                    if (!playing2)
+                        audio2.pause();
+                    else
+                    {
+                        audio2.play();
+                        renderbars(analyser2);
+                    }
+                }
+                
+                function updateRingsAndPlayButtons()
+                {
+                    document.getElementById('purpleRing').setAttribute('visible', playing1.toString());
+                    document.getElementById('blueRing').setAttribute('visible', playing2.toString());
+                    document.getElementById('purpleRing').emit(playing1 ? 'begin' : 'pause');
+                    document.getElementById('blueRing').emit(playing2 ? 'begin' : 'pause');
+                    document.getElementById('playbutton1').emit(playing1 ? 'begin' : 'pause');
+                    document.getElementById('playbutton2').emit(playing2 ? 'begin' : 'pause');
+                }
+
+
+                function renderbars(analyser)
+                {       
+                    var maxHeight = 2.1;
+                    var maxRadius = 1; // will change for each individual use
+                    var animate = function(timestamp)
+                    {
+                        analyser.getByteFrequencyData(frequencyData);
+                        var numFreqPerBar = Math.floor(analyser.frequencyBinCount / beatBars.length - 1);
+
+                        // Draw beat bars and rings.
+                        // IMPORTANT number of rings has to be <= number of bars
+                        for (var barCount = 0; barCount<beatBars.length; barCount++)
+                        {
+                            // get level of this particular bin
+                            var level = 0;
+                            for (var i=barCount * numFreqPerBar; i < (barCount + 1) * numFreqPerBar;i++)
+                                level += frequencyData[i];
+                            level = level / (255 * numFreqPerBar);
+                             
+                            // draw the bars
+                            var bar = document.getElementById(beatBars[barCount]);
+                            var height = level * maxHeight;
+                            bar.setAttribute('height', height);
+                            var pos = bar.getAttribute('position');
+                            pos.y = 0.5 * height - initialBarHeight;
+                            bar.setAttribute('position', pos);
+
+                            // draw the rings
+                            maxRadius = 1.8;
+                            if (barCount < rings.length)
+                            {
+                                var ring = rings[barCount];
+                                for (var i = 0; i < ring.length; i++)
+                                {
+                                    var ball = ring[i];
+                                    ball.setAttribute('radius', Math.max(0.1, level * maxRadius));
+                                    ball.setAttribute('opacity', Math.min(1, Math.max(0.2, level * 1.25)));
+                                }
+                            }
+                        }
+
+                        // Get total level (first numFreqPerBar values from frequencyData)
+                        var totalLevel = 0;
+                        for (var i=0; i<analyser.frequencyBinCount; i++)
+                            totalLevel += frequencyData[i];
+                        // Normalize to a number from 0 to 1
+                        totalLevel = totalLevel / 256 / analyser.frequencyBinCount;
+
+                        if (Math.abs(totalLevel - oldLevel) < 0.02)
+                            totalLevel = oldLevel;
+                        oldLevel = totalLevel;
+
+                        // bounce ball
+                        var ballIndex = 0;
+                        var ball = document.getElementById(beatBalls[ballIndex]);
+                        var maxYBounce = 7;
+                        var newPos = ball.getAttribute('position');
+                        newPos.y = 1 + totalLevel * maxYBounce;
+                        ball.setAttribute('position', newPos);            
+
+                        // color ball
+                        ballIndex = 1;
+                        ball = document.getElementById(beatBalls[ballIndex]);
+                        var colorLevel = Math.floor(totalLevel * 256);
+                        ball.setAttribute('material', "color:" + rgbToHex(colorLevel, 0, 128));            
+
+                        // pulse ball
+                        ballIndex = 2;
+                        ball = document.getElementById(beatBalls[ballIndex]);
+                        maxRadius = 3;
+                        var radius = totalLevel * maxRadius;
+                        ball.setAttribute('radius', radius);            
+                        
+                        // All the random balls
+                        maxRadius = 1.4;
+                        for (var i = 0; i < colorSpheres.length; i++)
+                            {
+                                colorSpheres[i].setAttribute('radius', Math.max(0.2, frequencyData[3+Math.floor(i / 2)] / 255 * maxRadius));
+                                colorSpheres[i].setAttribute('opacity', Math.min(1, Math.max(0.2, frequencyData[Math.floor(i / 2)] / 255 * 1.25)))
+                            }
+
+                        if (playing1 || playing2)
+                            requestAnimationFrame(animate)
+                        else
+                            resetbars();
+                    }
+                    requestAnimationFrame(animate);
+                } 
+
+                function resetbars()
+                {
+                    for (var barCount = 0; barCount<beatBars.length; barCount++)
+                    {
+                        var bar = document.getElementById(beatBars[barCount]);
+                        bar.setAttribute('height', initialBarHeight);
+                        var pos = bar.getAttribute('position');
+                        pos.y = 0.5 * initialBarHeight - initialBarHeight;
+                        bar.setAttribute('position', pos);
+                    }
+                    // change balls to where they used to be
+
+                    for (var ballCount = 0; ballCount<beatBalls.length; ballCount++)
+                        document.getElementById(beatBalls[ballCount].attrributes = initialBallAttributes[ballCount]);
+                    
+                    // change random spheres
+                    for (var i = 0; i < colorSpheres.length; i++)
+                    {
+                        colorSpheres[i].setAttribute('radius', 1);
+                        colorSpheres[i].setAttribute('opacity', 1);
+                    }
+                    // change rings
+                    for (var i = 0; i < rings.length; i++)
+                    {
+                        var ring = rings[i];
+                        for (j = 0; j < ring.length; j++)
+                        {
+                            ring[j].setAttribute('radius', 1);
+                            ring[j].setAttribute('opacity', 1);
+                        }
+                    }
+                }
+
+                function componentToHex(c) {
+                    var hex = c.toString(16);
+                    return hex.length == 1 ? "0" + hex : hex;
+                }
+
+                function rgbToHex(r, g, b) {
+                    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+                }
+
+                function getAttributeByName(name, attr)
+                {
+                    for (var i = 0; i<attr.length; i++)
+                        if (attr[i].name == name)
+                            return attr[i].value;
+                    return null;
+                }
+
+            </script>
+
+            <!-- HOTSPOTS -->
+         <a-torus scale="1 1 0" clicky position="-.5 .1 0" rotation="90 90 0" material="opacity:1; color:#9b6dff" event-set__downclick="_event: click; _target: #vrCam; position: -.5 2 0;"event-set__hover="_event: mouseenter; material.color:#54ff9b"
+                 event-set__leave="_event: mouseleave; material.color:#9b6dff">
+            <a-animation direction="alternate" dur="5000"repeat="indefinite" attribute="material.opacity"  to=".5"></a-animation>
+            </a-torus>
+            
+            <a-torus scale="1 1 0" clicky="" position="-6.75 0.1 9" rotation="90 90 0" material="opacity:1;color:#9b6dff" event-set__downclick="_event: click; _target: #vrCam; position: -6.75 2 9;"event-set__hover="_event: mouseenter; material.color:#54ff9b"
+                 event-set__leave="_event: mouseleave; material.color:#9b6dff">
+            <a-animation direction="alternate" dur="5000"repeat="indefinite" attribute="material.opacity"  to=".5"></a-animation>
+            </a-torus>
+            
+              <a-torus scale="1 1 0" clicky="" position="9.5 0.1 -3.5" rotation="90 90 0" material="opacity:1;color:#9b6dff" event-set__downclick="_event: click; _target: #vrCam; position: 9.5 2 -3.5;"event-set__hover="_event: mouseenter; material.color:#54ff9b"
+                 event-set__leave="_event: mouseleave; material.color:#9b6dff">
+            <a-animation direction="alternate" dur="5000"repeat="indefinite" attribute="material.opacity"  to=".5"></a-animation>
+            </a-torus>
+        
+            
+            <!-- WELCOME-->
+            <img id="welcome" src="images/musicIntro.png">
+            <a-entity class="link"
+                      geometry="primitive: plane; width: 4; height: 7;" id="welcome"
+                      position="-7.2 3.5 -3" rotation="0 30 0"
+                      material="shader: flat; src: #welcome"
+                      ></a-entity>    
+            <!-- Camera and Cursor-->
+            <a-entity id="vrCam" position=" -2 0 1">
+                
+            <a-camera vr-mode-ui="" spectator look-controls touch-enabled id="cam" position = '0 2 5'>
+                <a-cursor id="cursor" geometry='primitive: ring; radiusInner:.02; radiusOuter:.03', material='color:cyan; shader: flat' event-set__downclick="_event: mousedown; color: cyan; scale: 1 1 1"></a-cursor>
+            </a-camera>     </a-entity>
+        </a-scene>
+    </body>
+</html>
